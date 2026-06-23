@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { marked } from 'marked'
 import { vendors, Vendor } from './data'
 import { docs } from './content'
 import { vkey, entryOf, setStatus, setDeleted, restoreAll, useVState } from './store'
 
-const NAV = [['/', 'Home'], ['/whatsapp', 'WhatsApp'], ['/email', 'Email'], ['/flippers', 'Flippers'], ['/plates', 'Plates'], ['/other', 'Other'], ['/guides', 'Guides'], ['/research', 'Research']]
+const NAV = [['/', 'Overview'], ['/whatsapp', 'WhatsApp'], ['/email', 'Email'], ['/flippers', 'Flippers'], ['/plates', 'Plates'], ['/other', 'Other'], ['/plans', 'Plans'], ['/analysis', 'Analysis']]
 const REGIONS = ['All', 'DMV', 'USA', 'China', 'Intl']
 const catLabel = (c: string) => c === 'flipper' ? 'Flipper' : c === 'plate' ? 'Plate' : 'Other'
 
@@ -29,6 +29,31 @@ function VendorCtl({ v }: { v: Vendor }) {
     <div className="ctl">
       <button className={'mini' + (done ? ' done' : '')} onClick={() => setStatus(k, done ? 'new' : 'contacted')}>{done ? '✓ contacted' : 'mark contacted'}</button>
       <button className="mini del" onClick={() => setDeleted(k, true)}>delete</button>
+    </div>
+  )
+}
+
+function Feedback({ id, label }: { id: string; label?: string }) {
+  const [val, setVal] = useState('')
+  const [status, setStatus] = useState('')
+  useEffect(() => {
+    let alive = true
+    fetch('/api/feedback').then(r => r.json()).then(d => {
+      if (alive && d.data && d.data[id] && d.data[id].value != null) setVal(d.data[id].value)
+    }).catch(() => { const v = localStorage.getItem('fb:' + id); if (alive && v) setVal(v) })
+    return () => { alive = false }
+  }, [id])
+  const save = () => {
+    setStatus('saving…'); localStorage.setItem('fb:' + id, val)
+    fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: id, value: val }) })
+      .then(r => setStatus(r.ok ? 'saved for everyone ✓' : 'saved locally')).catch(() => setStatus('saved locally'))
+    setTimeout(() => setStatus(''), 2500)
+  }
+  return (
+    <div className="fb">
+      <div className="fb-h"><span>{label || 'Notes & feedback'}</span><span className="fb-s">{status}</span></div>
+      <textarea value={val} onChange={e => setVal(e.target.value)} onBlur={save} placeholder="Type notes or feedback — shared with everyone, saved permanently." />
+      <button className="mini" onClick={save}>Save</button>
     </div>
   )
 }
@@ -165,30 +190,71 @@ function Docs({ category, title }: { category: 'guide' | 'research'; title: stri
       <h1>{title}</h1>
       <div className="filters">{items.map((d, i) => <button key={i} className={sel === i ? 'on' : ''} onClick={() => setSel(i)}>{d.title}</button>)}</div>
       {doc ? <article className="doc" dangerouslySetInnerHTML={{ __html: marked.parse(doc.body) as string }} /> : <p className="muted">No documents.</p>}
+      {doc ? <Feedback id={'doc:' + category + ':' + doc.title} label={'Feedback on "' + doc.title + '"'} /> : null}
     </div>
   )
+}
+
+function NavCard({ to, title, desc, n }: { to: string; title: string; desc: string; n?: number }) {
+  return <NavLink to={to} className="navcard"><div className="nc-h"><b>{title}</b>{n != null ? <span className="count">{n}</span> : null}</div><span className="nc-d">{desc}</span></NavLink>
 }
 
 function Home() {
   const f = vendors.filter(v => v.category === 'flipper').length
   const p = vendors.filter(v => v.category === 'plate').length
+  const o = vendors.filter(v => v.category === 'other').length
   const wa = vendors.filter(v => v.whatsapp).length
   const em = vendors.filter(v => v.email).length
-  const usa = vendors.filter(v => v.region === 'USA').length
-  const cn = vendors.filter(v => v.region === 'China').length
+  const dmv = vendors.filter(v => v.region === 'DMV').length
   return (
     <div>
-      <h1>Platinum Plates — Outreach Hub</h1>
-      <p className="lede">Copy-ready partner outreach for every vendor we've found — WhatsApp & email, each with a customized message. Plus sourcing guides and research. Lists grow as the scraper finds more.</p>
-      <div className="stats">
-        <div className="stat"><b>{f}</b><span>flipper vendors</span></div>
-        <div className="stat"><b>{p}</b><span>plate vendors</span></div>
-        <div className="stat"><b>{wa}</b><span>WhatsApp-ready</span></div>
-        <div className="stat"><b>{em}</b><span>Email-ready</span></div>
-        <div className="stat"><b>{usa}</b><span>USA-based</span></div>
-        <div className="stat"><b>{cn}</b><span>China OEM</span></div>
-      </div>
-      <p className="muted">Tabs: WhatsApp & Email = ready-to-send outreach · Flippers/Plates = full directories · Guides = sourcing playbooks · Research = market + vendor analysis.</p>
+      <section className="hero">
+        <h1>Platinum Plates — Operating Hub</h1>
+        <p className="lede">Everything to get Platinum Plates off the ground, in one place: vetted suppliers with ready-to-send outreach, local DMV partners, sourcing plans, market analysis, and a shared workspace for notes &amp; feedback.</p>
+        <div className="stats">
+          <div className="stat"><b>{vendors.length}</b><span>vendors</span></div>
+          <div className="stat"><b>{wa}</b><span>WhatsApp-ready</span></div>
+          <div className="stat"><b>{em}</b><span>Email-ready</span></div>
+          <div className="stat"><b>{dmv}</b><span>DMV-local</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Outreach — ready to send</h2>
+        <div className="cards2">
+          <NavCard to="/whatsapp" title="WhatsApp" desc="Vendors with a real number + customized message. Copy → Open in WhatsApp." n={wa} />
+          <NavCard to="/email" title="Email" desc="Vendors with a real address + customized email. Copy → Open email." n={em} />
+          <NavCard to="/other" title="Other contacts" desc="Fulfillment, packaging, merch & local services to launch with." n={o} />
+        </div>
+      </section>
+
+      <section>
+        <h2>Supplier directories</h2>
+        <div className="cards2">
+          <NavCard to="/flippers" title="Flippers" desc="Complete-unit OEMs & brands to rebrand. Filter by region (incl. DMV)." n={f} />
+          <NavCard to="/plates" title="Plates" desc="Durable custom-plate printers & makers — POD, self-serve, wholesale." n={p} />
+        </div>
+      </section>
+
+      <section>
+        <h2>Knowledge</h2>
+        <div className="cards2">
+          <NavCard to="/plans" title="Plans & playbooks" desc="Lean plan, China OEM outreach, plate durability, flipper quality, assembly." />
+          <NavCard to="/analysis" title="Analysis" desc="Sourcing overview, OEM/ODM buyer's guide, competitors, online presence." />
+        </div>
+      </section>
+
+      <section>
+        <h2>Executive summary</h2>
+        <div className="doc summary-doc">
+          <p><b>Model:</b> buy-and-brand with easy fulfilment — source finished product, add our branding, sell to our DC car-scene audience. No in-house manufacturing.</p>
+          <p><b>Flippers:</b> source complete units direct from Chinese OEMs for custom logo + margin (US distributors like 510 won't brand). <b>Plates:</b> durable custom printing (dye-sub on coated blanks or UV + laminate) via POD/dropship + local DMV printers.</p>
+          <p><b>Now:</b> {wa} WhatsApp- and {em} email-ready vendors with customized outreach, plus {dmv} local DMV partners and {o} fulfillment/merch/packaging contacts to launch with. Work the lists by region + channel; mark contacted as you go.</p>
+          <p className="muted">Compliance: market flippers as show/off-road/export only; don't ship to states banning sale (DE/TN/FL); use FCC-ID remotes.</p>
+        </div>
+      </section>
+
+      <Feedback id="home:notes" label="Team notes & feedback (shared, permanent)" />
     </div>
   )
 }
@@ -205,8 +271,8 @@ export default function App() {
           <Route path="/flippers" element={<List cat="flipper" title="Flipper Outreach" />} />
           <Route path="/plates" element={<List cat="plate" title="Plate Outreach" />} />
           <Route path="/other" element={<List cat="other" title="Other Contacts" />} />
-          <Route path="/guides" element={<Docs category="guide" title="Sourcing Guides" />} />
-          <Route path="/research" element={<Docs category="research" title="Research" />} />
+          <Route path="/plans" element={<Docs category="guide" title="Plans & Playbooks" />} />
+          <Route path="/analysis" element={<Docs category="research" title="Analysis" />} />
         </Routes>
       </main>
     </>

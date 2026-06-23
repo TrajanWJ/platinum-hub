@@ -111,13 +111,19 @@ for r in rows:
     if "zhenxin" in norm(r["name"]) and not r.get("whatsapp"): r["whatsapp"] = "8618938509658"
 
 # dedupe by name+host; prefer the record WITH a WhatsApp number (+ its custom message), then higher fit
+def core(name):
+    n = re.sub(r"\(.*?\)", "", name or "")        # drop parentheticals
+    n = re.split(r"\s[-–]\s", n)[0]            # drop "- Person"
+    n = re.sub(r"\b(co|ltd|inc|llc|corp|company|limited|industrial|industry|trade|trading|technology|tech|auto|parts|accessories|import|export|crafts)\b", "", n.lower())
+    return re.sub(r"[^a-z0-9]", "", n)
 def better(a, b):
     aw, bw = (1 if a.get("whatsapp") else 0), (1 if b.get("whatsapp") else 0)
     if aw != bw: return a if aw > bw else b
     return a if (a["fit"] or 0) >= (b["fit"] or 0) else b
 best = {}
 for r in rows:
-    k = norm(r["name"]) + "|" + host(r["link"])
+    c = core(r["name"])
+    k = c if len(c) >= 5 else (norm(r["name"]) + "|" + host(r["link"]))
     best[k] = better(best[k], r) if k in best else r
 out = sorted(best.values(), key=lambda r: (-(1 if r.get("whatsapp") else 0), -(r["fit"] or 0), r["category"], r["name"]))
 

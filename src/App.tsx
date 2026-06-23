@@ -1,21 +1,23 @@
+import { useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { vendors, Vendor } from './data'
 
 const NAV = [['/', 'Home'], ['/flippers', 'Flipper Outreach'], ['/plates', 'Plate Outreach']]
+const REGIONS = ['All', 'USA', 'China', 'Intl']
 
 function Stars({ n }: { n: number }) {
-  return <span className="fit">{'\u2605'.repeat(n)}<span className="d">{'\u2605'.repeat(5 - n)}</span></span>
+  return <span className="fit">{'★'.repeat(n)}<span className="d">{'★'.repeat(5 - n)}</span></span>
 }
 
 function copy(text: string, el: HTMLButtonElement) {
-  navigator.clipboard.writeText(text).then(() => { const o = el.textContent; el.textContent = 'Copied!'; setTimeout(() => el.textContent = o, 1200) })
+  navigator.clipboard.writeText(text).then(() => { const o = el.textContent; el.textContent = 'Copied!'; setTimeout(() => { el.textContent = o }, 1200) })
 }
 
 function Card({ v }: { v: Vendor }) {
   const wa = v.whatsapp ? `https://wa.me/${v.whatsapp}?text=${encodeURIComponent(v.message)}` : null
   return (
     <article className="card">
-      <header><h3>{v.name}</h3><div className="meta"><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}</div></header>
+      <header><h3>{v.name}</h3><div className="meta"><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="msg">{v.message}</div>
       <div className="actions">
         <button className="btn" onClick={e => copy(v.message, e.currentTarget)}>Copy message</button>
@@ -27,21 +29,47 @@ function Card({ v }: { v: Vendor }) {
   )
 }
 
-function List({ cat }: { cat: 'flipper' | 'plate' }) {
-  const items = vendors.filter(v => v.category === cat).sort((a, b) => b.fit - a.fit)
-  return <section className="grid">{items.map((v, i) => <Card key={i} v={v} />)}</section>
+function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
+  const [region, setRegion] = useState('All')
+  const [q, setQ] = useState('')
+  const base = vendors.filter(v => v.category === cat)
+  const items = base
+    .filter(v => region === 'All' || v.region === region)
+    .filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => b.fit - a.fit)
+  return (
+    <div>
+      <h1>{title} <span className="count">{items.length}</span></h1>
+      <div className="filters">
+        {REGIONS.map(r => {
+          const n = r === 'All' ? base.length : base.filter(v => v.region === r).length
+          return <button key={r} className={region === r ? 'on' : ''} onClick={() => setRegion(r)}>{r} <b>{n}</b></button>
+        })}
+        <input className="search" placeholder="search name…" value={q} onChange={e => setQ(e.target.value)} />
+      </div>
+      <section className="grid">{items.map((v, i) => <Card key={i} v={v} />)}</section>
+    </div>
+  )
 }
 
 function Home() {
   const f = vendors.filter(v => v.category === 'flipper').length
   const p = vendors.filter(v => v.category === 'plate').length
   const wa = vendors.filter(v => v.whatsapp).length
+  const usa = vendors.filter(v => v.region === 'USA').length
+  const cn = vendors.filter(v => v.region === 'China').length
   return (
     <div>
       <h1>Platinum Plates — Outreach Hub</h1>
-      <p className="lede">Copy-ready partner messages. Tap Copy, then Open in WhatsApp / Alibaba. The list grows from the overnight scraper.</p>
-      <div className="stats"><div className="stat"><b>{f}</b><span>flipper vendors</span></div><div className="stat"><b>{p}</b><span>plate vendors</span></div><div className="stat"><b>{wa}</b><span>WhatsApp-ready</span></div></div>
-      <p className="muted">Use the tabs above. Phase 1 seed data — scraper + more page types (intl directory, email, walkthroughs, research) coming next.</p>
+      <p className="lede">Copy-ready partner messages for every vendor we've found. Tap Copy, then Open in WhatsApp or the supplier site. Lists grow as the scraper finds more.</p>
+      <div className="stats">
+        <div className="stat"><b>{f}</b><span>flipper vendors</span></div>
+        <div className="stat"><b>{p}</b><span>plate vendors</span></div>
+        <div className="stat"><b>{usa}</b><span>USA-based</span></div>
+        <div className="stat"><b>{cn}</b><span>China OEM</span></div>
+        <div className="stat"><b>{wa}</b><span>WhatsApp-ready</span></div>
+      </div>
+      <p className="muted">Filter by region + search on each tab. More page types (email lists, walkthroughs, research, forms) coming as we build.</p>
     </div>
   )
 }
@@ -53,8 +81,8 @@ export default function App() {
       <main className="wrap">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/flippers" element={<List cat="flipper" />} />
-          <Route path="/plates" element={<List cat="plate" />} />
+          <Route path="/flippers" element={<List cat="flipper" title="Flipper Outreach" />} />
+          <Route path="/plates" element={<List cat="plate" title="Plate Outreach" />} />
         </Routes>
       </main>
     </>

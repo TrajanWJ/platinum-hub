@@ -1,5 +1,13 @@
 :root{--bg:#f6f5fb;--card:#fff;--ink:#322f3d;--mut:#7b7889;--line:#e7e3f1;--lav:#6b4fd6;--lavbg:#ece7fb;--mint:#159c6a;--mintbg:#e1f6ec}
 *{box-sizing:border-box}html,body{overflow-x:hidden}
+.count{font-size:14px;color:var(--lav);background:var(--lavbg);border-radius:20px;padding:1px 10px;vertical-align:middle}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 14px}
+.filters button{background:#fff;color:var(--mut);border:1px solid var(--line);border-radius:20px;padding:6px 13px;cursor:pointer;font:inherit;font-size:13px}
+.filters button b{color:var(--lav)}.filters button:hover{border-color:var(--lav)}
+.filters button.on{background:var(--lav);color:#fff;border-color:var(--lav)}.filters button.on b{color:#fff}
+.search{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:20px;padding:6px 14px;outline:none;min-width:150px;flex:1;max-width:240px}
+.search:focus{border-color:var(--lav)}
+.chip.ok{background:var(--mintbg);color:var(--mint)}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
 .wrap{max-width:1000px;margin:0 auto;padding:0 18px;width:100%}
 .top{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}

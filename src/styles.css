@@ -10,6 +10,7 @@
 .chip.ok{background:var(--mintbg);color:var(--mint)}
 .chip.flipper{background:var(--lavbg);color:var(--lav);font-weight:600}
 .chip.plate{background:#dcf2ee;color:#0f766e;font-weight:600}
+.chip.other{background:#fbeede;color:#b9742a;font-weight:600}
 .catbar{margin-bottom:2px}
 .ctl{display:flex;gap:8px;margin-top:11px;border-top:1px dashed var(--line);padding-top:10px}
 .mini.done{background:var(--mintbg);color:var(--mint);border-color:#bfe9d2;font-weight:600}

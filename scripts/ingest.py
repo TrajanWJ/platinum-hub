@@ -106,6 +106,26 @@ for f in glob.glob(os.path.join(RESEARCH, "wa-*.json")):
         message=msg if msg else (flip_msg(name) if cat == "flipper" else plate_msg(name, "", "")),
         verified=bool(d.get("verified"))))
 
+# unified leads (local DMV + other/etc) — self-contained: contact + whatsapp + email + messages
+for f in glob.glob(os.path.join(RESEARCH, "lead-*.json")):
+    try: d = json.load(open(f))
+    except: continue
+    name = g(d, "name")
+    if not name: continue
+    cat = d.get("category") if d.get("category") in ("flipper", "plate", "other") else "other"
+    reg = d.get("region") if d.get("region") in ("DMV", "USA", "China", "Intl") else region_of(g(d, "location") or g(d, "country"))
+    wa = re.sub(r"\D", "", g(d, "whatsapp"))
+    msg = g(d, "message") or (flip_msg(name) if cat == "flipper" else plate_msg(name, "", ""))
+    r = dict(name=name, category=cat, region=reg, fit=d.get("fitScore") or 0, moq="",
+        link=g(d, "url"), linkLabel="", contact=g(d, "contact") or g(d, "location"),
+        whatsapp=wa, message=msg, verified=bool(d.get("verified")))
+    em = g(d, "email")
+    if em and "@" in em:
+        r["email"] = em
+        if g(d, "emailSubject") or g(d, "subject"): r["emailSubject"] = g(d, "emailSubject") or g(d, "subject")
+        if g(d, "emailBody"): r["emailBody"] = g(d, "emailBody")
+    rows.append(r)
+
 # known direct WhatsApp (from outreach research)
 for r in rows:
     if "zhenxin" in norm(r["name"]) and not r.get("whatsapp"): r["whatsapp"] = "8618938509658"

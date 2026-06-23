@@ -5,8 +5,9 @@ import { vendors, Vendor } from './data'
 import { docs } from './content'
 import { vkey, entryOf, setStatus, setDeleted, restoreAll, useVState } from './store'
 
-const NAV = [['/', 'Home'], ['/whatsapp', 'WhatsApp'], ['/email', 'Email'], ['/flippers', 'Flippers'], ['/plates', 'Plates'], ['/guides', 'Guides'], ['/research', 'Research']]
-const REGIONS = ['All', 'USA', 'China', 'Intl']
+const NAV = [['/', 'Home'], ['/whatsapp', 'WhatsApp'], ['/email', 'Email'], ['/flippers', 'Flippers'], ['/plates', 'Plates'], ['/other', 'Other'], ['/guides', 'Guides'], ['/research', 'Research']]
+const REGIONS = ['All', 'DMV', 'USA', 'China', 'Intl']
+const catLabel = (c: string) => c === 'flipper' ? 'Flipper' : c === 'plate' ? 'Plate' : 'Other'
 
 function Stars({ n }: { n: number }) {
   return <span className="fit">{'★'.repeat(n)}<span className="d">{'★'.repeat(5 - n)}</span></span>
@@ -37,7 +38,7 @@ function Card({ v }: { v: Vendor }) {
   const wa = v.whatsapp ? `https://wa.me/${v.whatsapp}?text=${encodeURIComponent(v.message)}` : null
   return (
     <article className={'card' + (done ? ' done' : '')}>
-      <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{v.category === 'flipper' ? 'Flipper' : 'Plate'}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}{v.email ? <span className="chip ok">email</span> : null}{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
+      <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{catLabel(v.category)}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}{v.email ? <span className="chip ok">email</span> : null}{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="msg">{v.message}</div>
       <div className="actions">
         <button className="btn" onClick={e => copy(v.message, e.currentTarget)}>Copy message</button>
@@ -57,7 +58,7 @@ function EmailCard({ v }: { v: Vendor }) {
   const done = entryOf(vkey(v)).status === 'contacted'
   return (
     <article className={'card' + (done ? ' done' : '')}>
-      <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{v.category === 'flipper' ? 'Flipper' : 'Plate'}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
+      <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{catLabel(v.category)}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="subj"><b>Subject:</b> {subj}</div>
       <div className="msg">{body}</div>
       <div className="actions">
@@ -107,7 +108,7 @@ function statusMatch(v: Vendor, stat: string) {
   return stat === 'contacted' ? done : !done
 }
 
-function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
+function List({ cat, title }: { cat: 'flipper' | 'plate' | 'other'; title: string }) {
   useVState()
   const [region, setRegion] = useState('All'); const [q, setQ] = useState(''); const [stat, setStat] = useState('All')
   const base = vendors.filter(v => v.category === cat && !entryOf(vkey(v)).deleted)
@@ -124,7 +125,7 @@ function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
   )
 }
 
-const CATS: [string, string][] = [['All', 'All'], ['flipper', 'Flippers'], ['plate', 'Plates']]
+const CATS: [string, string][] = [['All', 'All'], ['flipper', 'Flippers'], ['plate', 'Plates'], ['other', 'Other']]
 
 function ChannelList({ kind }: { kind: 'whatsapp' | 'email' }) {
   useVState()
@@ -203,6 +204,7 @@ export default function App() {
           <Route path="/email" element={<ChannelList kind="email" />} />
           <Route path="/flippers" element={<List cat="flipper" title="Flipper Outreach" />} />
           <Route path="/plates" element={<List cat="plate" title="Plate Outreach" />} />
+          <Route path="/other" element={<List cat="other" title="Other Contacts" />} />
           <Route path="/guides" element={<Docs category="guide" title="Sourcing Guides" />} />
           <Route path="/research" element={<Docs category="research" title="Research" />} />
         </Routes>

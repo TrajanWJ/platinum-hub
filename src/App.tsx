@@ -13,6 +13,14 @@ function copy(text: string, el: HTMLButtonElement) {
   navigator.clipboard.writeText(text).then(() => { const o = el.textContent; el.textContent = 'Copied!'; setTimeout(() => { el.textContent = o }, 1200) })
 }
 
+function siteLabel(url?: string) {
+  if (!url) return 'site'
+  if (url.includes('alibaba')) return 'Alibaba'
+  if (url.includes('made-in-china')) return 'Made-in-China'
+  if (url.includes('dhgate')) return 'DHgate'
+  return 'site'
+}
+
 function Card({ v }: { v: Vendor }) {
   const wa = v.whatsapp ? `https://wa.me/${v.whatsapp}?text=${encodeURIComponent(v.message)}` : null
   return (
@@ -22,7 +30,7 @@ function Card({ v }: { v: Vendor }) {
       <div className="actions">
         <button className="btn" onClick={e => copy(v.message, e.currentTarget)}>Copy message</button>
         {wa ? <a className="btn primary" href={wa} target="_blank" rel="noopener">Open in WhatsApp</a>
-            : v.link ? <a className="btn primary" href={v.link} target="_blank" rel="noopener">Open {v.linkLabel || 'link'} ↗</a> : null}
+            : v.link ? <a className="btn primary" href={v.link} target="_blank" rel="noopener">Open {siteLabel(v.link)} ↗</a> : null}
       </div>
       {v.whatsapp ? <div className="num"><span>+{v.whatsapp}</span><button className="mini" onClick={e => copy('+' + v.whatsapp!, e.currentTarget)}>copy</button></div> : null}
     </article>

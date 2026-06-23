@@ -1,3 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-export default defineConfig({ base: '/platinum-hub/', plugins: [react()], server: { host: true } })
+// Pages serves under /platinum-hub/; Vercel (and default) serve at root.
+const base = process.env.DEPLOY_TARGET === 'pages' ? '/platinum-hub/' : '/'
+export default defineConfig({ base, plugins: [react()], server: { host: true } })

@@ -127,6 +127,24 @@ for r in rows:
     best[k] = better(best[k], r) if k in best else r
 out = sorted(best.values(), key=lambda r: (-(1 if r.get("whatsapp") else 0), -(r["fit"] or 0), r["category"], r["name"]))
 
+# attach hunted emails + customized outreach emails (em-*.json) onto matching vendors
+core_index = {}
+for r in out:
+    core_index.setdefault(core(r["name"]), r)
+em_count = 0
+for f in glob.glob(os.path.join(RESEARCH, "em-*.json")):
+    try: d = json.load(open(f))
+    except: continue
+    email = g(d, "email")
+    if not email or "@" not in email: continue
+    v = core_index.get(core(g(d, "name")))
+    if not v: continue
+    v["email"] = email
+    if g(d, "subject"): v["emailSubject"] = g(d, "subject")
+    if g(d, "body"): v["emailBody"] = g(d, "body")
+    em_count += 1
+print("attached emails:", em_count)
+
 # clean empties
 for r in out:
     for kk in ("moq", "contact", "whatsapp", "link", "linkLabel"):

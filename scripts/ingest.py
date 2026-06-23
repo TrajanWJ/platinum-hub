@@ -46,7 +46,8 @@ def plate_msg(name, ful, method):
     return intro + f"Method of interest: {method or 'durable custom printing'}. Could you share durability, wholesale/dropship terms, MOQ, and turnaround? We'll test with a small order first. Thanks!"
 
 def phone_digits(contact):
-    if "whatsapp" not in contact.lower(): return ""
+    c = contact.lower()
+    if not any(k in c for k in ("whatsapp", "mobile", "wechat", "tel:")): return ""
     m = re.search(r"\+?\d[\d\s\-]{8,}\d", contact)
     return re.sub(r"\D", "", m.group(0)) if m else ""
 
@@ -90,17 +91,35 @@ for f in glob.glob(os.path.join(RESEARCH, "mfr-*.json")):
         contact=g(d, "contact"), whatsapp=phone_digits(g(d, "contact")), message=flip_msg(name),
         verified=bool(d.get("verified"))))
 
+# WhatsApp-prep wave: hunted numbers + customized messages
+for f in glob.glob(os.path.join(RESEARCH, "wa-*.json")):
+    try: d = json.load(open(f))
+    except: continue
+    name = g(d, "name")
+    if not name: continue
+    cat = d.get("category") if d.get("category") in ("flipper", "plate") else "flipper"
+    wa = re.sub(r"\D", "", g(d, "whatsapp"))
+    msg = g(d, "message")
+    rows.append(dict(name=name, category=cat, region=region_of(g(d, "country")),
+        fit=d.get("fitScore") or 0, moq=g(d, "moq"), link=g(d, "url"), linkLabel="",
+        contact=g(d, "contact"), whatsapp=wa,
+        message=msg if msg else (flip_msg(name) if cat == "flipper" else plate_msg(name, "", "")),
+        verified=bool(d.get("verified"))))
+
 # known direct WhatsApp (from outreach research)
 for r in rows:
-    if "zhenxin" in norm(r["name"]): r["whatsapp"] = "8618938509658"
+    if "zhenxin" in norm(r["name"]) and not r.get("whatsapp"): r["whatsapp"] = "8618938509658"
 
-# dedupe by name+host, keep highest fit
+# dedupe by name+host; prefer the record WITH a WhatsApp number (+ its custom message), then higher fit
+def better(a, b):
+    aw, bw = (1 if a.get("whatsapp") else 0), (1 if b.get("whatsapp") else 0)
+    if aw != bw: return a if aw > bw else b
+    return a if (a["fit"] or 0) >= (b["fit"] or 0) else b
 best = {}
 for r in rows:
     k = norm(r["name"]) + "|" + host(r["link"])
-    if k not in best or (r["fit"] or 0) > (best[k]["fit"] or 0):
-        best[k] = r
-out = sorted(best.values(), key=lambda r: (-(r["fit"] or 0), r["category"], r["name"]))
+    best[k] = better(best[k], r) if k in best else r
+out = sorted(best.values(), key=lambda r: (-(1 if r.get("whatsapp") else 0), -(r["fit"] or 0), r["category"], r["name"]))
 
 # clean empties
 for r in out:

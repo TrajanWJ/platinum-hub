@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { vendors, Vendor } from './data'
 
-const NAV = [['/', 'Home'], ['/flippers', 'Flipper Outreach'], ['/plates', 'Plate Outreach']]
+const NAV = [['/', 'Home'], ['/whatsapp', 'WhatsApp'], ['/flippers', 'Flipper Outreach'], ['/plates', 'Plate Outreach']]
 const REGIONS = ['All', 'USA', 'China', 'Intl']
 
 function Stars({ n }: { n: number }) {
@@ -60,6 +60,30 @@ function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
   )
 }
 
+function WhatsAppList() {
+  const [region, setRegion] = useState('All')
+  const [q, setQ] = useState('')
+  const base = vendors.filter(v => v.whatsapp)
+  const items = base
+    .filter(v => region === 'All' || v.region === region)
+    .filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => b.fit - a.fit)
+  return (
+    <div>
+      <h1>WhatsApp-Ready <span className="count">{items.length}</span></h1>
+      <p className="lede">Vendors with a real WhatsApp number + a customized message. Tap Copy, then Open in WhatsApp — the message is pre-filled.</p>
+      <div className="filters">
+        {REGIONS.map(r => {
+          const n = r === 'All' ? base.length : base.filter(v => v.region === r).length
+          return <button key={r} className={region === r ? 'on' : ''} onClick={() => setRegion(r)}>{r} <b>{n}</b></button>
+        })}
+        <input className="search" placeholder="search name…" value={q} onChange={e => setQ(e.target.value)} />
+      </div>
+      <section className="grid">{items.map((v, i) => <Card key={i} v={v} />)}</section>
+    </div>
+  )
+}
+
 function Home() {
   const f = vendors.filter(v => v.category === 'flipper').length
   const p = vendors.filter(v => v.category === 'plate').length
@@ -89,6 +113,7 @@ export default function App() {
       <main className="wrap">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/whatsapp" element={<WhatsAppList />} />
           <Route path="/flippers" element={<List cat="flipper" title="Flipper Outreach" />} />
           <Route path="/plates" element={<List cat="plate" title="Plate Outreach" />} />
         </Routes>

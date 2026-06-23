@@ -25,7 +25,7 @@ function Card({ v }: { v: Vendor }) {
   const wa = v.whatsapp ? `https://wa.me/${v.whatsapp}?text=${encodeURIComponent(v.message)}` : null
   return (
     <article className="card">
-      <header><h3>{v.name}</h3><div className="meta"><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}{v.email ? <span className="chip ok">email</span> : null}{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
+      <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{v.category === 'flipper' ? 'Flipper' : 'Plate'}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}{v.email ? <span className="chip ok">email</span> : null}{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="msg">{v.message}</div>
       <div className="actions">
         <button className="btn" onClick={e => copy(v.message, e.currentTarget)}>Copy message</button>
@@ -43,7 +43,7 @@ function EmailCard({ v }: { v: Vendor }) {
   const mailto = `mailto:${v.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
   return (
     <article className="card">
-      <header><h3>{v.name}</h3><div className="meta"><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
+      <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{v.category === 'flipper' ? 'Flipper' : 'Plate'}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="subj"><b>Subject:</b> {subj}</div>
       <div className="msg">{body}</div>
       <div className="actions">
@@ -80,19 +80,28 @@ function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
   )
 }
 
+const CATS: [string, string][] = [['All', 'All'], ['flipper', 'Flippers'], ['plate', 'Plates']]
+
 function ChannelList({ kind }: { kind: 'whatsapp' | 'email' }) {
-  const [region, setRegion] = useState('All'); const [q, setQ] = useState('')
+  const [region, setRegion] = useState('All'); const [q, setQ] = useState(''); const [cat, setCat] = useState('All')
   const base = vendors.filter(v => kind === 'whatsapp' ? v.whatsapp : v.email)
-  const items = base.filter(v => region === 'All' || v.region === region).filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.fit - a.fit)
+  const byCat = base.filter(v => cat === 'All' || v.category === cat)
+  const items = byCat.filter(v => region === 'All' || v.region === region).filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.fit - a.fit)
   const title = kind === 'whatsapp' ? 'WhatsApp-Ready' : 'Email-Ready'
   const lede = kind === 'whatsapp'
-    ? 'Vendors with a real WhatsApp number + a customized message. Tap Copy, then Open in WhatsApp — the message is pre-filled.'
-    : 'Vendors with a real email + a customized outreach email. Tap Copy, or Open email to draft it pre-filled.'
+    ? 'Vendors with a real WhatsApp number + a customized message. Pick Flippers or Plates, then Copy → Open in WhatsApp (pre-filled).'
+    : 'Vendors with a real email + a customized outreach email. Pick Flippers or Plates, then Copy → Open email (pre-filled).'
   return (
     <div>
       <h1>{title} <span className="count">{items.length}</span></h1>
       <p className="lede">{lede}</p>
-      <RegionBar base={base} region={region} setRegion={setRegion} q={q} setQ={setQ} />
+      <div className="filters catbar">
+        {CATS.map(([val, lab]) => {
+          const n = val === 'All' ? base.length : base.filter(v => v.category === val).length
+          return <button key={val} className={cat === val ? 'on' : ''} onClick={() => setCat(val)}>{lab} <b>{n}</b></button>
+        })}
+      </div>
+      <RegionBar base={byCat} region={region} setRegion={setRegion} q={q} setQ={setQ} />
       <section className="grid">{items.map((v, i) => kind === 'whatsapp' ? <Card key={i} v={v} /> : <EmailCard key={i} v={v} />)}</section>
     </div>
   )

@@ -145,6 +145,18 @@ for f in glob.glob(os.path.join(RESEARCH, "em-*.json")):
     em_count += 1
 print("attached emails:", em_count)
 
+# purge bad entries: marketplace/category aggregates, off-target low-fit, and weak fit-2 with no contact
+JUNK = re.compile(r"showroom|suppliers \(|sourcing marketplace|supplier hub|not a single brand|\(category\)|category$|/s\?k=|amazon\.[a-z.]+\s*-|global sources\s*-|ozon\s*-", re.I)
+def keep(r):
+    if JUNK.search(r["name"]): return False
+    fit = r.get("fit") or 0
+    if fit <= 1: return False
+    if fit == 2 and not r.get("email") and not r.get("whatsapp") and not r.get("verified"): return False
+    return True
+before = len(out)
+out = [r for r in out if keep(r)]
+print(f"purged {before - len(out)} bad entries -> {len(out)} kept")
+
 # clean empties
 for r in out:
     for kk in ("moq", "contact", "whatsapp", "link", "linkLabel"):

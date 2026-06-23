@@ -3,6 +3,7 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import { marked } from 'marked'
 import { vendors, Vendor } from './data'
 import { docs } from './content'
+import { vkey, entryOf, setStatus, setDeleted, restoreAll, useVState } from './store'
 
 const NAV = [['/', 'Home'], ['/whatsapp', 'WhatsApp'], ['/email', 'Email'], ['/flippers', 'Flippers'], ['/plates', 'Plates'], ['/guides', 'Guides'], ['/research', 'Research']]
 const REGIONS = ['All', 'USA', 'China', 'Intl']
@@ -21,10 +22,21 @@ function siteLabel(url?: string) {
   return 'site'
 }
 
+function VendorCtl({ v }: { v: Vendor }) {
+  const k = vkey(v); const done = entryOf(k).status === 'contacted'
+  return (
+    <div className="ctl">
+      <button className={'mini' + (done ? ' done' : '')} onClick={() => setStatus(k, done ? 'new' : 'contacted')}>{done ? '✓ contacted' : 'mark contacted'}</button>
+      <button className="mini del" onClick={() => setDeleted(k, true)}>delete</button>
+    </div>
+  )
+}
+
 function Card({ v }: { v: Vendor }) {
+  const done = entryOf(vkey(v)).status === 'contacted'
   const wa = v.whatsapp ? `https://wa.me/${v.whatsapp}?text=${encodeURIComponent(v.message)}` : null
   return (
-    <article className="card">
+    <article className={'card' + (done ? ' done' : '')}>
       <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{v.category === 'flipper' ? 'Flipper' : 'Plate'}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.moq ? <span className="chip">MOQ {v.moq}</span> : null}{v.email ? <span className="chip ok">email</span> : null}{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="msg">{v.message}</div>
       <div className="actions">
@@ -33,6 +45,7 @@ function Card({ v }: { v: Vendor }) {
             : v.link ? <a className="btn primary" href={v.link} target="_blank" rel="noopener">Open {siteLabel(v.link)} ↗</a> : null}
       </div>
       {v.whatsapp ? <div className="num"><span>+{v.whatsapp}</span><button className="mini" onClick={e => copy('+' + v.whatsapp!, e.currentTarget)}>copy</button></div> : null}
+      <VendorCtl v={v} />
     </article>
   )
 }
@@ -41,8 +54,9 @@ function EmailCard({ v }: { v: Vendor }) {
   const subj = v.emailSubject || 'Partnership inquiry — Platinum Plates'
   const body = v.emailBody || v.message
   const mailto = `mailto:${v.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+  const done = entryOf(vkey(v)).status === 'contacted'
   return (
-    <article className="card">
+    <article className={'card' + (done ? ' done' : '')}>
       <header><h3>{v.name}</h3><div className="meta"><span className={'chip ' + v.category}>{v.category === 'flipper' ? 'Flipper' : 'Plate'}</span><Stars n={v.fit} /><span className="chip">{v.region}</span>{v.verified ? <span className="chip ok">verified</span> : null}</div></header>
       <div className="subj"><b>Subject:</b> {subj}</div>
       <div className="msg">{body}</div>
@@ -51,6 +65,7 @@ function EmailCard({ v }: { v: Vendor }) {
         <a className="btn primary" href={mailto}>Open email ✉</a>
       </div>
       <div className="num"><span>{v.email}</span><button className="mini" onClick={e => copy(v.email!, e.currentTarget)}>copy</button></div>
+      <VendorCtl v={v} />
     </article>
   )
 }
@@ -67,14 +82,43 @@ function RegionBar({ base, region, setRegion, q, setQ }: any) {
   )
 }
 
+function StatusBar({ stat, setStat, items }: { stat: string; setStat: (s: string) => void; items: Vendor[] }) {
+  const newN = items.filter(v => entryOf(vkey(v)).status !== 'contacted').length
+  return (
+    <div className="filters statusbar">
+      {[['All', 'All'], ['new', 'New'], ['contacted', 'Contacted']].map(([val, lab]) => {
+        const n = val === 'All' ? items.length : val === 'new' ? newN : items.length - newN
+        return <button key={val} className={stat === val ? 'on' : ''} onClick={() => setStat(val)}>{lab} <b>{n}</b></button>
+      })}
+    </div>
+  )
+}
+
+function DeletedNote() {
+  const all = useVState()
+  const n = Object.values(all).filter((e: any) => e.deleted).length
+  if (!n) return null
+  return <p className="muted deleted-note">{n} hidden/deleted · <button className="linkbtn" onClick={restoreAll}>restore all</button></p>
+}
+
+function statusMatch(v: Vendor, stat: string) {
+  if (stat === 'All') return true
+  const done = entryOf(vkey(v)).status === 'contacted'
+  return stat === 'contacted' ? done : !done
+}
+
 function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
-  const [region, setRegion] = useState('All'); const [q, setQ] = useState('')
-  const base = vendors.filter(v => v.category === cat)
-  const items = base.filter(v => region === 'All' || v.region === region).filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.fit - a.fit)
+  useVState()
+  const [region, setRegion] = useState('All'); const [q, setQ] = useState(''); const [stat, setStat] = useState('All')
+  const base = vendors.filter(v => v.category === cat && !entryOf(vkey(v)).deleted)
+  const pre = base.filter(v => region === 'All' || v.region === region).filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase()))
+  const items = pre.filter(v => statusMatch(v, stat)).sort((a, b) => b.fit - a.fit)
   return (
     <div>
       <h1>{title} <span className="count">{items.length}</span></h1>
       <RegionBar base={base} region={region} setRegion={setRegion} q={q} setQ={setQ} />
+      <StatusBar stat={stat} setStat={setStat} items={pre} />
+      <DeletedNote />
       <section className="grid">{items.map((v, i) => <Card key={i} v={v} />)}</section>
     </div>
   )
@@ -83,10 +127,12 @@ function List({ cat, title }: { cat: 'flipper' | 'plate'; title: string }) {
 const CATS: [string, string][] = [['All', 'All'], ['flipper', 'Flippers'], ['plate', 'Plates']]
 
 function ChannelList({ kind }: { kind: 'whatsapp' | 'email' }) {
-  const [region, setRegion] = useState('All'); const [q, setQ] = useState(''); const [cat, setCat] = useState('All')
-  const base = vendors.filter(v => kind === 'whatsapp' ? v.whatsapp : v.email)
+  useVState()
+  const [region, setRegion] = useState('All'); const [q, setQ] = useState(''); const [cat, setCat] = useState('All'); const [stat, setStat] = useState('All')
+  const base = vendors.filter(v => (kind === 'whatsapp' ? v.whatsapp : v.email) && !entryOf(vkey(v)).deleted)
   const byCat = base.filter(v => cat === 'All' || v.category === cat)
-  const items = byCat.filter(v => region === 'All' || v.region === region).filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.fit - a.fit)
+  const pre = byCat.filter(v => region === 'All' || v.region === region).filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase()))
+  const items = pre.filter(v => statusMatch(v, stat)).sort((a, b) => b.fit - a.fit)
   const title = kind === 'whatsapp' ? 'WhatsApp-Ready' : 'Email-Ready'
   const lede = kind === 'whatsapp'
     ? 'Vendors with a real WhatsApp number + a customized message. Pick Flippers or Plates, then Copy → Open in WhatsApp (pre-filled).'
@@ -102,6 +148,8 @@ function ChannelList({ kind }: { kind: 'whatsapp' | 'email' }) {
         })}
       </div>
       <RegionBar base={byCat} region={region} setRegion={setRegion} q={q} setQ={setQ} />
+      <StatusBar stat={stat} setStat={setStat} items={pre} />
+      <DeletedNote />
       <section className="grid">{items.map((v, i) => kind === 'whatsapp' ? <Card key={i} v={v} /> : <EmailCard key={i} v={v} />)}</section>
     </div>
   )

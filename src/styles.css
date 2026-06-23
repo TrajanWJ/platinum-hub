@@ -11,6 +11,13 @@
 .chip.flipper{background:var(--lavbg);color:var(--lav);font-weight:600}
 .chip.plate{background:#dcf2ee;color:#0f766e;font-weight:600}
 .catbar{margin-bottom:2px}
+.ctl{display:flex;gap:8px;margin-top:11px;border-top:1px dashed var(--line);padding-top:10px}
+.mini.done{background:var(--mintbg);color:var(--mint);border-color:#bfe9d2;font-weight:600}
+.mini.del{color:#b4435f}.mini.del:hover{background:#fce8ef;border-color:#f0b6c6}
+.card.done{opacity:.55}
+.statusbar button.on{background:#322f3d;border-color:#322f3d;color:#fff}.statusbar button.on b{color:#fff}
+.linkbtn{background:none;border:0;color:var(--lav);cursor:pointer;font:inherit;padding:0;text-decoration:underline}
+.deleted-note{margin:6px 0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
 .wrap{max-width:1000px;margin:0 auto;padding:0 18px;width:100%}
 .top{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
